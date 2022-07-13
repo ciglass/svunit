@@ -39,6 +39,7 @@ my @tests;
 my $mock;
 my $uvm;
 my $wavedrom;
+my @directory;
 my $help;
 
 
@@ -54,6 +55,7 @@ sub usage() {
   print "  -m|--mock                : includes the uvm_mock_pkg to the final build file\n";
   print "  -U|--uvm                 : build SVUnit with UVM\n";
   print "  -w|--wavedrom            : process json files as wavedrom output\n";
+  print "     --directory           : only build svunit on selected directories\n";
   print "  -h|--help                : prints this help screen\n";
   print "\n";
   exit 1;
@@ -166,6 +168,10 @@ sub getUnittests {
   else {
     @unittests = <$dir/*_unit_test.sv>;
   }
+  if (!@unittests) {
+      print "ERROR: Did not find any unit tests to run. You must either pass them in on the command line via '--test <path> --test <path>', or Name the files '*_unit_test.sv' and put them in the correct directory\n";
+      exit 1;
+  }
   return @unittests;
 }
 
@@ -176,6 +182,7 @@ GetOptions("o|out=s" => \$outdir,
            "m|mock" => \$mock,
            "U|uvm" => \$uvm,
            "w|wavedrom" => \$wavedrom,
+           "directory=s" => \@directory,
            "h|help" => \$help
            ) or usage();
 
@@ -190,6 +197,7 @@ $FILELIST->print("+incdir+$cwd\n");
 $FILELIST->print("+incdir+$ENV{SVUNIT_INSTALL}/svunit_base/junit-xml\n");
 $FILELIST->print("$ENV{SVUNIT_INSTALL}/svunit_base/junit-xml/junit_xml.sv\n");
 $FILELIST->print("+incdir+$ENV{SVUNIT_INSTALL}/svunit_base\n");
+$FILELIST->print("+incdir+$ENV{SVUNIT_INSTALL}/svunit_base/util\n");
 $FILELIST->print("$ENV{SVUNIT_INSTALL}/svunit_base/svunit_pkg.sv\n");
 if (defined $mock) {
   $FILELIST->print("$ENV{SVUNIT_INSTALL}/svunit_base/uvm-mock/svunit_uvm_mock_pkg.sv\n");
@@ -204,6 +212,12 @@ if ($wavedrom) {
 }
 
 getFilelists;
-buildTestsuite($pwd);
+
+foreach (@directory) {
+    buildTestsuite($_);
+}
+if (@directory < 1) {
+    buildTestsuite($pwd);
+}
 exit buildTestrunner;
 #print "Info: Found no unit tests. No SVUnit framework created.\n";
